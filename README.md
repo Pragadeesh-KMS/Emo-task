@@ -1,4 +1,44 @@
 
+# Emotion-based Task Recommender
+
+The Emotion-based Task Recommender is a Python application that matches user-entered tasks and emotions with a dataset of tasks, providing recommendations based on matching emotions.
+
+---
+
+## Prerequisites
+
+Before running the script, ensure you have the following installed:
+
+- **Python:** [Download and install Python](https://www.python.org/downloads/) (preferably version 3.x).
+
+- **pip:** Python's package manager usually comes installed with Python. You can upgrade it to the latest version using:
+
+    ```bash
+    python -m pip install --upgrade pip
+    ```
+
+- **faiss:** Install the `faiss` library. Depending on your setup, you can choose between GPU or CPU versions:
+
+    - For GPU version:
+
+        ```bash
+        pip install faiss-gpu
+        ```
+
+    - For CPU version:
+
+        ```bash
+        pip install faiss
+        ```
+
+- **Required Python Libraries:** Install other required Python libraries:
+
+    ```bash
+    pip install pandas scikit-learn numpy spacy sentence-transformers tabulate
+    ```
+
+---
+
 # Emo-task
 Emo-task is a system that matches user-entered tasks and emotions with a database of tasks and their associated emotions, providing recommendations based on matching emotions.
 
@@ -58,7 +98,7 @@ Task Matcher is designed to assist users in finding relevant tasks based on thei
 2. Run the main script:
 
    ```bash
-   python Emotask-recommender.py
+   python Emotask.py
    ```
 
 3. Follow the prompts to enter tasks and emotions.
