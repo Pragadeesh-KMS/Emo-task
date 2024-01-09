@@ -116,6 +116,3 @@ Task Matcher is designed to assist users in finding relevant tasks based on thei
 
 For inquiries or feedback, contact [Pragadeesh(mailto:kmspragadeesh6000@gmail.com).
 
----
-
-Feel free to customize this README with additional information, specific instructions, or any other details relevant to your project.
