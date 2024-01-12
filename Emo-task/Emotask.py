@@ -1,8 +1,8 @@
 import faiss
 import numpy as np
-import pandas as pd
 from sentence_transformers import SentenceTransformer
-from tabulate import tabulate
+import pandas as pd
+from ipywidgets import DatePicker, VBox
 
 # Load dataset and Sentence Transformer model
 data = pd.read_csv("/content/drive/MyDrive/Emotask/training_3.csv")  # Replace with your dataset file
@@ -36,7 +36,46 @@ while True:
     if task_input.lower() == "done":
         break
     user_tasks.append(task_input)
+
 print(user_tasks)
+
+import pandas as pd
+import ipywidgets as widgets
+from IPython.display import display
+
+def select_time(hours, minutes):
+    print(f"Time selected: {hours:02d}:{minutes:02d}")
+
+# Assuming user_tasks already contains the tasks entered by the user
+deadlines = {}
+
+for task in user_tasks:
+    print(f"Enter deadline for task '{task}':")
+
+    date_picker = widgets.DatePicker(description=f'Select Date for {task}')
+    hour_selector = widgets.IntSlider(min=0, max=23, description='Hour:')
+    minute_selector = widgets.IntSlider(min=0, max=55, step=5, description='Minute:', value=0)
+
+    display(widgets.VBox([date_picker, widgets.HBox([hour_selector, minute_selector])]))
+    deadlines[task] = None
+
+    def on_date_change(change, task_name=task):
+        deadlines[task_name] = change['new']
+
+    def on_time_change(hours, minutes, task_name=task):
+        deadline_time = pd.Timestamp(deadlines[task_name]) if deadlines[task_name] else pd.Timestamp.now()
+        new_deadline = pd.Timestamp(
+            year=deadline_time.year,
+            month=deadline_time.month,
+            day=deadline_time.day,
+            hour=hours,
+            minute=minutes,
+        )
+        deadlines[task_name] = new_deadline
+
+    date_picker.observe(on_date_change, names='value')
+    widgets.interactive(on_time_change, hours=hour_selector, minutes=minute_selector, task_name=task)
+
 print("Choose up to 6 emotions from the following list by entering the corresponding numbers separated by spaces:")
 emotion_options = [
     'happy', 'calm', 'motivated', 'stress', 'tiredness',
@@ -76,7 +115,6 @@ for task_text, task_emb in zip(nearest_tasks, user_task_embeddings):
 # Sort tasks based on the number of matching emotions in descending order
 similarity_scores.sort(key=lambda x: x[1], reverse=True)
 
-# Print recommendations based on the sorted similarity scores
 print("Tasks matched on semantic search:")
 
 similar_tasks_emotions = []
@@ -85,9 +123,11 @@ for task_text in nearest_tasks:
     task_emotions = emotion_texts[task_index]  # Getting the emotions for the similar task
     similar_tasks_emotions.append((task_text, task_emotions))
 
-# Print emotions of similar tasks
-for task, emotions in similar_tasks_emotions:
-    print(f"Task: {task}, Emotions: {emotions}")
+# Create DataFrame from the list of tuples
+similar_tasks_df = pd.DataFrame(similar_tasks_emotions, columns=['Task', 'Emotions'])
+
+# Display DataFrame
+display(similar_tasks_df)
 # Preprocess user emotions to lowercase and remove spaces
 user_emotions_processed = [emotion.lower().replace(" ", "") for emotion in user_emotions]
 
@@ -110,9 +150,60 @@ for user_task, user_task_emb in zip(user_tasks, user_task_embeddings):
 # Sort tasks based on the number of matching emotions in descending order
 matching_emotions_count.sort(key=lambda x: x[1], reverse=True)
 
-# Print user tasks and their matching emotion count
-# Print user tasks and their matching emotion count in a tabular format
-table_data = [[user_task, f"Aligns with {count} emotions"] for user_task, count in matching_emotions_count]
-table_headers = ["User Task", "Matching Emotion Count"]
+# Create a DataFrame from matching_emotions_count for tabular representation
+df_matching_emotions = pd.DataFrame(matching_emotions_count, columns=['||User Task||', '||Matching Emotion Count||'])
 
-print(tabulate(table_data, headers=table_headers, tablefmt="pretty"))
+# Display the DataFrame
+display(df_matching_emotions)
+print("TASK RECOMMENDATION BASED ON DEADLINE:")
+
+# Convert the deadlines dictionary to a DataFrame for tabular representation
+tasks = list(deadlines.keys())
+deadline_dates = [pd.to_datetime(deadlines[task]).date() if deadlines[task] else None for task in tasks]
+deadline_times = [pd.to_datetime(deadlines[task]).time() if deadlines[task] else None for task in tasks]
+
+deadlines_df = pd.DataFrame({
+    'Task': tasks,
+    'Deadline Date': deadline_dates,
+    'Deadline Time': deadline_times
+})
+
+# Sort DataFrame by 'Deadline Date' and then 'Deadline Time' columns in ascending order
+deadlines_df = deadlines_df.sort_values(by=['Deadline Date', 'Deadline Time']).reset_index(drop=True)
+
+display(deadlines_df)
+def assign_priority(matching_count, deadline_date):
+    if matching_count == 3:
+        today = pd.to_datetime('today').date()
+        if deadline_date == today:
+            return 1
+        elif deadline_date == today + pd.DateOffset(days=1):
+            return 2
+        elif deadline_date == today + pd.DateOffset(days=2):
+            return 4
+    elif matching_count == 2:
+        today = pd.to_datetime('today').date()
+        if deadline_date == today:
+            return 3
+        elif deadline_date == today + pd.DateOffset(days=1):
+            return 7
+        elif deadline_date == today + pd.DateOffset(days=2):
+            return 8
+    elif matching_count == 1:
+        today = pd.to_datetime('today').date()
+        if deadline_date == today:
+            return 5
+        elif deadline_date == today + pd.DateOffset(days=1):
+            return 7
+        elif deadline_date == today + pd.DateOffset(days=2):
+            return 8
+    else:
+        return 6
+
+# Merge and prioritize tasks based on emotions and deadlines
+merged_df = pd.merge(df_matching_emotions, deadlines_df, left_on='||User Task||', right_on='Task', how='inner')
+merged_df['Priority'] = merged_df.apply(lambda x: assign_priority(x['||Matching Emotion Count||'], x['Deadline Date']), axis=1)
+sorted_df = merged_df.sort_values(by=['Priority', 'Deadline Date', 'Deadline Time']).reset_index(drop=True)
+
+# Display the merged and sorted DataFrame
+display(sorted_df)
